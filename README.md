@@ -10,6 +10,11 @@ A Python package that provides an event-driven interface for shared memory commu
 - TTL support for temporary data
 - Automatic cleanup of expired data
 - Thread-safe operations
+- **In-memory HTTP API:** HTTP-like request/response and route handling all in RAM (no network).
+- **StreamingEvent:** Publish/subscribe, chunked/real-time data streams over shared memory.
+- **SocketsManager:** Pub/sub, room/channel-based, socket-like messaging—entirely RAM-backed.
+- **Monitoring tools:** Live stats for pool size, event/message frequency, handler performance.
+- **Optional encryption:** Secure shared memory with symmetric key (requires `cryptography`).
 
 ## Installation
 
@@ -45,6 +50,56 @@ memory_events.cleanup()
 ## How It Works
 
 The package uses memory-mapped files for shared memory communication between processes. When a process updates a value in shared memory, all registered event handlers in other processes are automatically notified and executed.
+
+---
+
+## Extended Usage: Advanced APIs
+
+### InMemoryHTTPManager
+
+```python
+from mvent.core.in_memory_http import InMemoryHTTPManager
+http = InMemoryHTTPManager()
+@http.route("/echo")
+def echo(req): return {"echo": req["data"]}
+print(http.send_request("/echo", method="POST", data="hi"))
+```
+
+### StreamingEvent
+
+```python
+from mvent.core.streaming_event import StreamingEvent
+stream = StreamingEvent("my_stream")
+stream.subscribe(lambda d: print("Got:", d))
+stream.publish("Live Message #1")
+```
+
+### SocketsManager
+
+```python
+from mvent.core.sockets_manager import SocketsManager
+sm = SocketsManager()
+room = "test"
+sm.connect(room)
+sm.subscribe(room, print)
+sm.send(room, "socket message!")
+```
+
+### MonitoringTools and Encryption
+
+```python
+from mvent.core.monitoring import MonitoringTools
+from mvent.core.shared_memory import SharedMemoryPool
+from cryptography.fernet import Fernet
+key = Fernet.generate_key()
+secure_pool = SharedMemoryPool("secure_pool", encryption_key=key)
+monitor = MonitoringTools(pool=secure_pool)
+monitor.record_event("test")
+```
+- To enable encryption, install [cryptography](https://pypi.org/project/cryptography/) (`pip install cryptography`).
+- All features are backward compatible.
+
+---
 
 ## Advanced Usage
 

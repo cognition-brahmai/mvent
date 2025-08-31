@@ -29,34 +29,36 @@ class SharedMemoryPool:
     """  
     _instances: Set[weakref.ref] = set()  
       
-    def __init__(  
-        self,   
-        pool_name: str = "default_pool",  
-        max_size: int = 1024 * 1024 * 10,  # 10MB default  
-        auto_cleanup: bool = True,  
-        cleanup_interval: int = 60,  # seconds  
-        compression: bool = True,  
-        temp_dir: Optional[str] = None  
-    ):  
-        self.pool_name = pool_name  # Removed UUID addition  
-        self.max_size = max_size  
-        self.compression = compression  
-        self.auto_cleanup = auto_cleanup  
-        self.cleanup_interval = cleanup_interval  
-          
-        self.temp_dir = temp_dir or tempfile.gettempdir()  
-        self.filename = os.path.join(self.temp_dir, f".{self.pool_name}_shared_memory.mmap")  
-          
-        self._lock = threading.Lock()  
-        self._cleanup_thread = None  
-        self._stop_cleanup = threading.Event()  
-          
-        self._create_memory_file()  
-          
-        if auto_cleanup:  
-            self._start_cleanup_thread()  
-          
-        self._instances.add(weakref.ref(self))  
+    def __init__(
+        self,
+        pool_name: str = "default_pool",
+        max_size: int = 1024 * 1024 * 10,  # 10MB default
+        auto_cleanup: bool = True,
+        cleanup_interval: int = 60,  # seconds
+        compression: bool = True,
+        temp_dir: Optional[str] = None,
+        encryption_key: Optional[bytes] = None
+    ):
+        self.pool_name = pool_name  # Removed UUID addition
+        self.max_size = max_size
+        self.compression = compression
+        self.auto_cleanup = auto_cleanup
+        self.cleanup_interval = cleanup_interval
+
+        self.temp_dir = temp_dir or tempfile.gettempdir()
+        self.filename = os.path.join(self.temp_dir, f".{self.pool_name}_shared_memory.mmap")
+
+        self.encryption_key = encryption_key
+        self._lock = threading.Lock()
+        self._cleanup_thread = None
+        self._stop_cleanup = threading.Event()
+
+        self._create_memory_file()
+
+        if auto_cleanup:
+            self._start_cleanup_thread()
+
+        self._instances.add(weakref.ref(self))
   
     @contextlib.contextmanager  
     def _get_mmap(self):  
@@ -72,38 +74,42 @@ class SharedMemoryPool:
                 f.write(b'\x00' * self.max_size)  
             os.chmod(self.filename, 0o600)  
   
-    def _load_data(self) -> Dict[str, MemoryEntry]:  
-        """Load data from shared memory"""  
-        with self._get_mmap() as mm:  
-            try:  
-                mm.seek(0)  
-                header = mm.read(4)  
-                if not header.strip(b'\x00'):  
-                    return {}  
-                data_length = struct.unpack('I', header)[0]  
-                if data_length == 0 or data_length > self.max_size - 4:  
-                    return {}  
-                serialized = mm.read(data_length)  
-                data = pickle.loads(serialized)  
-                if not isinstance(data, dict):  
-                    return {}  
-                return data  
-            except (pickle.UnpicklingError, EOFError, struct.error):  
-                return {}  
+    def _load_data(self) -> Dict[str, MemoryEntry]:
+        """Load data from shared memory, optionally decrypting"""
+        with self._get_mmap() as mm:
+            try:
+                mm.seek(0)
+                header = mm.read(4)
+                if not header.strip(b'\x00'):
+                    return {}
+                data_length = struct.unpack('I', header)[0]
+                if data_length == 0 or data_length > self.max_size - 4:
+                    return {}
+                serialized = mm.read(data_length)
+                if self.encryption_key:
+                    serialized = self._decrypt_data(serialized)
+                data = pickle.loads(serialized)
+                if not isinstance(data, dict):
+                    return {}
+                return data
+            except (pickle.UnpicklingError, EOFError, struct.error):
+                return {}
       
-    def _save_data(self, data: Dict[str, MemoryEntry]):  
-        """Save data to shared memory"""  
-        with self._get_mmap() as mm:  
-            serialized = pickle.dumps(data)  
-            data_length = len(serialized)  
-            header = struct.pack('I', data_length)  # unsigned int (4 bytes)  
-            total_size = len(header) + data_length  
-            if total_size > self.max_size:  
-                raise ValueError(f"Data exceeds maximum size of {self.max_size} bytes")  
-            mm.seek(0)  
-            mm.write(header)  
-            mm.write(serialized)  
-            mm.flush()  
+    def _save_data(self, data: Dict[str, MemoryEntry]):
+        """Save data to shared memory, optionally encrypted"""
+        with self._get_mmap() as mm:
+            serialized = pickle.dumps(data)
+            if self.encryption_key:
+                serialized = self._encrypt_data(serialized)
+            data_length = len(serialized)
+            header = struct.pack('I', data_length)  # unsigned int (4 bytes)
+            total_size = len(header) + data_length
+            if total_size > self.max_size:
+                raise ValueError(f"Data exceeds maximum size of {self.max_size} bytes")
+            mm.seek(0)
+            mm.write(header)
+            mm.write(serialized)
+            mm.flush()
   
     def _start_cleanup_thread(self):  
         """Start the background cleanup thread"""  
@@ -240,6 +246,36 @@ class SharedMemoryPool:
         """Context manager support"""  
         return self  
   
-    def __exit__(self, exc_type, exc_val, exc_tb):  
-        """Cleanup on context manager exit"""  
-        self.cleanup()  
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Cleanup on context manager exit"""
+        self.cleanup()
+
+    # --- Encryption Support ---
+    def _encrypt_data(self, data: bytes) -> bytes:
+        """
+        Encrypts bytes using the provided encryption_key (Fernet).
+        Requires: pip install cryptography
+        """
+        if not self.encryption_key:
+            return data
+        try:
+            from cryptography.fernet import Fernet
+            cipher = Fernet(self.encryption_key)
+            return cipher.encrypt(data)
+        except ImportError:
+            raise ImportError("cryptography package is required for encryption. Install with 'pip install cryptography'")
+        except Exception:
+            return data
+
+    def _decrypt_data(self, data: bytes) -> bytes:
+        """
+        Decrypts bytes using the provided encryption_key.
+        """
+        if not self.encryption_key:
+            return data
+        try:
+            from cryptography.fernet import Fernet
+            cipher = Fernet(self.encryption_key)
+            return cipher.decrypt(data)
+        except Exception:
+            return data
