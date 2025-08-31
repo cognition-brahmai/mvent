@@ -1,7 +1,7 @@
 """
 Example usage of memory events
 """
-from memory_events.decorators.memory_events import MemoryEventHandler
+from mvent.decorators.memory_events import MemoryEventHandler
 import time
 
 def main():
