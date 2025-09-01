@@ -67,12 +67,12 @@ flowchart TB
     EM2[MemoryEventHandler]
   end
   SMP[SharedMemoryPool]
-  ENC[Encryption (Fernet/AES)]
-  EventMGR(EventManager)
-  HTTP(InMemoryHTTPManager)
-  SE(StreamingEvent)
-  SM(SocketsManager)
-  MONITOR(MonitoringTools)
+  EventMGR[EventManager]
+  HTTP[InMemoryHTTPManager]
+  SE[StreamingEvent]
+  SM[SocketsManager]
+  MONITOR[MonitoringTools]
+  ENC[Encryption - Fernet/AES]
 
   A1 --> EM1
   EM1 <--> SMP
@@ -87,9 +87,9 @@ flowchart TB
   EM2 <--> SMP
   EM2 <--> EventMGR
 
-  MONITOR -.-> SMP
-  MONITOR -.-> HTTP
-  MONITOR -.-> SM
+  MONITOR --> SMP
+  MONITOR --> HTTP
+  MONITOR --> SM
 ```
 
 ---
@@ -295,7 +295,7 @@ flowchart TB
     EM2[MemoryEventHandler]
   end
   SMP[SharedMemoryPool]
-  ENC[Encryption (Fernet/AES)]
+  ENC[Encryption - Fernet/AES]
   EventMGR(EventManager)
   HTTP(InMemoryHTTPManager)
   SE(StreamingEvent)
