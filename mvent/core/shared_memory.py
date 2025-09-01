@@ -109,7 +109,15 @@ class SharedMemoryPool:
             mm.seek(0)
             mm.write(header)
             mm.write(serialized)
-            mm.flush()
+            mm.flush()   # Ensure flush to mmap
+            import os as _os
+            # Extra flush to disk for cross-process win32 safety
+            try:
+                _os.fsync(mm.fileno())
+            except Exception as e:
+                pass  # Not all mmap objects have fileno/flush at file level everywhere
+            # Diagnostic info
+            # print("Shared memory data flushed, file:", self.filename)
   
     def _start_cleanup_thread(self):  
         """Start the background cleanup thread"""  
@@ -134,9 +142,17 @@ class SharedMemoryPool:
                 current_time = time.time()  
                 expired = []  
   
-                for key, entry in data.items():  
-                    if (entry.ttl and current_time - entry.timestamp > entry.ttl) or (not os.path.exists(f"/proc/{entry.creator_pid}")):
-                        expired.append(key)  
+                import sys
+                IS_POSIX = sys.platform != "win32" and hasattr(os, "geteuid")
+                for key, entry in data.items():
+                    expired_due_to_ttl = entry.ttl and current_time - entry.timestamp > entry.ttl
+                    expired_due_to_proc = False
+                    if IS_POSIX:
+                        proc_path = f"/proc/{entry.creator_pid}"
+                        expired_due_to_proc = not os.path.exists(proc_path)
+                    # On Windows, skip process-liveness expiration; only expire via TTL
+                    if expired_due_to_ttl or expired_due_to_proc:
+                        expired.append(key)
   
                 for key in expired:  
                     del data[key]  
