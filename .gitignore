@@ -3,3 +3,6 @@ mvent/*/__pycache__/*
 ./build/*
 ./dist/*
 *.egg-info/*
+.token
+build/*
+dist/*
