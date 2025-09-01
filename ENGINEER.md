@@ -295,7 +295,7 @@ flowchart TB
     EM2[MemoryEventHandler]
   end
   SMP[SharedMemoryPool]
-  ENC[Encryption (Fernet/AES)]
+  ENC[Encryption - Fernet/AES]
   EventMGR(EventManager)
   HTTP(InMemoryHTTPManager)
   SE(StreamingEvent)
