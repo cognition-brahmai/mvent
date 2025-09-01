@@ -1,7 +1,7 @@
 """
 Memory Events Package
 """
-__version__ = "0.1.0"
+__version__ = "1.0.2"
 
 from .decorators.memory_events import MemoryEventHandler
 from .core.shared_memory import SharedMemoryPool

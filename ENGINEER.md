@@ -173,7 +173,7 @@ flowchart TB
         EM2[MemoryEventHandler]
     end
     SMP[[SharedMemoryPool]]
-    EventMGR[((EventManager))]
+    EventMGR(((EventManager)))
     HTTP((InMemoryHTTPManager))
     SE((StreamingEvent))
     SM((SocketsManager))
@@ -284,6 +284,8 @@ For support/questions:
 - Email address: see repository contact
 
 ---
+```mermaid
+flowchart TB
     EM2 <--> SMP
     SMP <--> ENC
     EM1 <--> EventMGR
@@ -410,6 +412,8 @@ print("Memory stats:", monitor.get_memory_stats())
 ```
 
 **Pattern:** Drop-in monitoring for any handler/event, live pool stats, and opt-in end-to-end encryption.
+```mermaid
+flowchart TB
     EventMGR <--> SMP
     HTTP <--> SMP
     SE <--> SMP
