@@ -1,17 +1,67 @@
-====================================================================================================
-HTTP BENCHMARK RESULTS - MULTI-PAYLOAD SIZE TEST
-====================================================================================================
-Date: 2025-09-01 05:06:21
+================================================================================
+HTTP BENCHMARK RESULTS
+================================================================================
+Date: 2025-09-01 06:26:44
 Python Version: 3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:17:27) [MSC v.1929 64 bit (AMD64)]
 CPU Count: 20
 Total RAM: 23.1 GB
 Test Configuration: Quick Test (100 requests)
-Payload Sizes: 1 byte, 1 KB, 100 KB, 1 MB
-----------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
-THROUGHPUT COMPARISON (req/s)
+PERFORMANCE SUMMARY
 --------------------------------------------------------------------------------
-Method                    1 byte       1 KB         100 KB       1 MB        
+Method                    Req/s        Avg Lat (ms) CPU %      Mem (MB)   Efficiency  
 --------------------------------------------------------------------------------
-Traditional HTTP         0.5         0.5         0.5         0.5         
-FastAPI HTTP             511.1       500.6       1456.8      323.1       
+Traditional HTTP          0.5          2046.52      1.4        57.8       0.3         
+FastAPI HTTP              1659.4       0.60         17.4       58.8       95.6        
+mvent InMemoryHTTP        100270.2     0.01         0.0        58.9       100270.2    
+
+================================================================================
+DETAILED RESULTS
+================================================================================
+
+TRADITIONAL HTTP
+----------------------------------------
+Throughput:           0.5 req/s
+Total Time:           204.6528 s
+Average Latency:      2046.52 ms
+Min Latency:          2015.69 ms
+Max Latency:          2058.86 ms
+95th Percentile:      2057.46 ms
+Average CPU Usage:    1.4%
+Peak CPU Usage:       104.2%
+Average Memory:       57.8 MB
+Peak Memory:          58.6 MB
+Memory Delta:         1.5 MB
+Efficiency Score:     0.3 req/s per CPU%
+
+FASTAPI HTTP
+----------------------------------------
+Throughput:           1659.4 req/s
+Total Time:           0.0603 s
+Average Latency:      0.60 ms
+Min Latency:          0.00 ms
+Max Latency:          2.08 ms
+95th Percentile:      1.41 ms
+Average CPU Usage:    17.4%
+Peak CPU Usage:       104.2%
+Average Memory:       58.8 MB
+Peak Memory:          58.8 MB
+Memory Delta:         0.0 MB
+Efficiency Score:     95.6 req/s per CPU%
+
+MVENT INMEMORYHTTP
+----------------------------------------
+Throughput:           100270.2 req/s
+Total Time:           0.0010 s
+Average Latency:      0.01 ms
+Min Latency:          0.00 ms
+Max Latency:          1.00 ms
+95th Percentile:      0.00 ms
+Average CPU Usage:    0.0%
+Peak CPU Usage:       0.0%
+Average Memory:       58.9 MB
+Peak Memory:          58.9 MB
+Memory Delta:         0.0 MB
+Efficiency Score:     100270.2 req/s per CPU%
+
