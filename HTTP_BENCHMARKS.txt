@@ -1,123 +1,17 @@
-PS C:\VAULT\mvent> python -m benchmarking.benchmark_http_vs_mvent
-Running benchmark with 100 requests per test...
+====================================================================================================
+HTTP BENCHMARK RESULTS - MULTI-PAYLOAD SIZE TEST
+====================================================================================================
+Date: 2025-09-01 05:06:21
+Python Version: 3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:17:27) [MSC v.1929 64 bit (AMD64)]
+CPU Count: 20
+Total RAM: 23.1 GB
+Test Configuration: Quick Test (100 requests)
+Payload Sizes: 1 byte, 1 KB, 100 KB, 1 MB
+----------------------------------------------------------------------------------------------------
 
-Starting traditional HTTP server...
-127.0.0.1 - - [01/Sep/2025 03:55:21] code 501, message Unsupported method ('GET')
-127.0.0.1 - - [01/Sep/2025 03:55:21] "GET / HTTP/1.1" 501 -
-HTTP server ready!
-127.0.0.1 - - [01/Sep/2025 03:55:23] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:25] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:27] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:29] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:31] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:33] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:35] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:38] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:40] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:42] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:44] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:46] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:48] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:50] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:52] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:54] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:56] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:55:58] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:00] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:02] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:04] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:06] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:08] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:10] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:12] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:14] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:16] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:18] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:21] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:23] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:25] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:27] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:29] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:31] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:33] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:35] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:37] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:39] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:41] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:43] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:45] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:47] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:49] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:51] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:53] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:55] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:57] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:56:59] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:02] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:04] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:06] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:08] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:10] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:12] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:14] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:16] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:18] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:20] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:22] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:24] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:26] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:28] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:30] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:32] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:34] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:36] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:38] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:40] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:42] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:45] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:47] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:49] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:51] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:53] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:55] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:57] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:57:59] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:01] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:03] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:05] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:07] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:09] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:11] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:13] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:15] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:17] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:19] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:21] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:23] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:26] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:28] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:30] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:32] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:34] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:36] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:38] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:40] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:42] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:44] "POST /bench HTTP/1.1" 200 -
-127.0.0.1 - - [01/Sep/2025 03:58:46] "POST /bench HTTP/1.1" 200 -
-Traditional HTTP: 100 requests in 204.8444s, 0.5 req/s
-
-Starting FastAPI server...
-FastAPI server ready!
-FastAPI HTTP: 100 requests in 0.1878s, 532.3 req/s
-
-Testing mvent InMemoryHTTPManager...
-mvent InMemoryHTTPManager: 100 requests in 0.0010s, 100031.1 req/s
-
-Benchmark complete!
-
-Notes:
-- Traditional HTTP: Basic Python http.server
-- FastAPI HTTP: Modern ASGI server with async handling
-- mvent: In-memory HTTP simulation
-- All tests use session-based connection reuse for fair comparison
+THROUGHPUT COMPARISON (req/s)
+--------------------------------------------------------------------------------
+Method                    1 byte       1 KB         100 KB       1 MB        
+--------------------------------------------------------------------------------
+Traditional HTTP         0.5         0.5         0.5         0.5         
+FastAPI HTTP             511.1       500.6       1456.8      323.1       
