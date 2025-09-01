@@ -1,17 +1,18 @@
 # mvent Engineer's Documentation
 
 ## Table of Contents
+
 1. [Introduction](#introduction)
 2. [Core Design & Architecture](#core-design--architecture)
-   - SharedMemoryPool
-   - EventManager
-   - MemoryEventHandler
+   - [SharedMemoryPool](#sharedmemorypool)
+   - [EventManager](#eventmanager)
+   - [MemoryEventHandler](#memoryeventhandler)
 3. [Advanced Modules](#advanced-modules)
-   - InMemoryHTTPManager
-   - StreamingEvent
-   - SocketsManager
-   - MonitoringTools
-   - Encryption
+   - [InMemoryHTTPManager](#inmemoryhttpmanager)
+   - [StreamingEvent](#streamingevent)
+   - [SocketsManager](#socketsmanager)
+   - [MonitoringTools](#monitoringtools)
+   - [Encryption](#encryption)
 4. [Public API Reference](#public-api-reference)
 5. [Usage Patterns & Workflows](#usage-patterns--workflows)
 6. [Benchmarking](#benchmarking)
@@ -24,479 +25,390 @@
 
 ## Introduction
 
-**mvent** is a Python package enabling event-driven shared memory communication and advanced in-memory IPC patterns. With a simple, decorator-based API, it allows multi-process applications and distributed systems to communicate efficiently and react to real-time data changes, events, and message flows—all with strong thread safety, monitoring, and optional encryption.
+**mvent** is a modern Python package for event-driven **shared memory** communication and ultra-fast, safe, in-memory IPC. It’s designed for devs who want to build distributed, multi-process (or even multiprocessor!) systems that need to thrill on low-latency data exchange, with real monitoring, encryption, and the power/finesse of event-driven programming.
 
-**Key features:**
-- Shared memory communication
-- Event-driven, decorator-centric API
-- TTL for temporary data
-- In-memory HTTP, streaming, sockets, and pub/sub channels
-- Monitoring and statistics hooks
-- Optional encrypted shared memory (AES/Fernet)
-- Thread-safe: locks, cleanup, resource management
+#### Why you'd use mvent:
+- Sick of bottlenecks and boilerplate in multi-process apps?
+- Hate server/firewall/config hell for local IPC?
+- Need rock-solid thread/process safety, built-in monitoring, and optional AES-grade encryption?
+- Want pure Python, but with speed closer to C-backed IPC than the sad “standard” libs?
+
+You're welcome.
+
+**Key features, bro:**
+- Atomic, event-driven shared memory comms
+- Decorator-based API for minimal cognitive load
+- TTL for ephemeral data
+- In-memory "HTTP", streaming data, and socket-style channels
+- Drop-in monitoring/statistics
+- Pluggable encryption (Fernet/AES)
+- Zero-hassle resource management, cleanup, and thread/process safety
 
 ---
 
-## High-Level Architecture
+## Core Design & Architecture
+
+Here’s where we get into the *meat* of mvent. At its heart:
+
+- **SharedMemoryPool:** The literal “pool” of data, mapped in RAM and accessible (safely!) across Python processes. Think pickleable objects, TTL, instant publish/subscribe, and optional encryption.
+- **MemoryEventHandler:** The event-to-handler glue—lets you `@on("event")` and broadcast updates across processes.
+- **EventManager:** Watches pools for changes and dispatches notifications with gnarly efficiency.
+
+> **Architecture Block Diagram**
 
 ```mermaid
 flowchart TB
-    subgraph Process_A
-        A1[Application]
-        EM1[MemoryEventHandler]
-    end
-    subgraph Process_B
-        B1[Application]
-        EM2[MemoryEventHandler]
-    end
-    SMP[SharedMemoryPool]
-    EventMGR(EventManager)
-    HTTP(InMemoryHTTPManager)
-    SE(StreamingEvent)
-    SM(SocketsManager)
-    MONITOR(MonitoringTools)
-    ENC[Encryption (Fernet/AES)]
+  subgraph Process_A
+    A1[Application]
+    EM1[MemoryEventHandler]
+  end
+  subgraph Process_B
+    B1[Application]
+    EM2[MemoryEventHandler]
+  end
+  SMP[SharedMemoryPool]
+  ENC[Encryption (Fernet/AES)]
+  EventMGR(EventManager)
+  HTTP(InMemoryHTTPManager)
+  SE(StreamingEvent)
+  SM(SocketsManager)
+  MONITOR(MonitoringTools)
 
-    A1 --> EM1
-    B1 --> EM2
-    EM1 <--> SMP
-    EM2 <--> SMP
-    SMP <--> ENC
-    EM1 <--> EventMGR
+  A1 --> EM1
+  EM1 <--> SMP
+  EM1 <--> EventMGR
+  SMP <--> ENC
+  EventMGR <--> SMP
+  HTTP <--> SMP
+  SE <--> SMP
+  SM <--> SMP
+
+  B1 --> EM2
+  EM2 <--> SMP
+  EM2 <--> EventMGR
+
+  MONITOR -.-> SMP
+  MONITOR -.-> HTTP
+  MONITOR -.-> SM
+```
+
+---
+
+### SharedMemoryPool
+
+This is the RAM-powered backbone of mvent. Supports:
+- **Data lifecycle:** Create/attach, store Python objects (pickled), auto-TTL, explicit cleanup
+- **Thread/process safety:** Platform-agnostic file locks, atomic updates
+- **Encryption:** Opt-in per-pool, Fernet/AES block encryption (on pickle blobs), transparent on read/write
+- **Scalability:** Memory limited only by OS/disk quota; multiplex any number of handlers/processes
+- **Extensibility:** Swap mmap for distributed stores if you hate the OS
+
+### EventManager
+
+- **Event registrations** are indexed/listed per pool
+- **Change detection:** Watches pool values for each event-name key
+- **Callback dispatch:** Emits to all registered (live) handlers, any process on that pool
+- **Threaded watchers:** Decouples event emission from heavy handler logic; handlers never block system
+
+### MemoryEventHandler
+
+- **Decorator API:** `@on(event_name)` for dead-simple registration
+- **Emit, cleanup, multi-handler:** Trigger events for shared-state data, manage lifecycle programmatically or via context
+- **Full process-awareness:** Handlers like broadcast—other processes running will get the ping (if not deadlocked, obviously)
+
+---
+
+## Advanced Modules
+
+Time for the **gourmet** stuff, dude.
+
+### InMemoryHTTPManager
+
+- **HTTP gone RAM:** Route `"/myendpoint"` to handler, but traffic never hits the wire. Insanely fast, with full request/response objects.
+- **Streaming:** Route returns `StreamingEvent` if handler wants to chunk or "flush" multi-part data (think: video, logs, blobs)
+- **Use-cases:** Local "APIs," perf benchmarking, fake microservices, serverless shims, etc.
+
+### StreamingEvent
+
+- **Observable pattern**: zero-overhead, multi-subscriber, channel-based data feeds (over shared memory!)
+- **Backpressure awareness:** Monitors slow subscribers, tracks delivery stats
+- **Atomic pub/sub:** All subscribers, all processes on the pool, guaranteed order
+
+### SocketsManager
+
+- **Room/channel messaging:** Sane pub/sub, multi-producer and multi-consumer
+- **All in memory:** No kernel-level sockets, no TCP/UDP, just fast AF data moves
+- **Integrates with monitors/encryption**
+
+### MonitoringTools
+
+- **Perf stats:** Auto track handler call times, event frequency, memory use per pool
+- **Realtime:** Expose these via in-RAM HTTP or custom endpoints
+- **Wrap any function** to get granular timing and exception stats
+
+### Encryption
+
+- **Per-pool opt-in:** AES/Fernet, drop-in with Python’s cryptography lib
+- **Zero friction:** Read or write as usual—encryption happens below the API, no code changes if you go from plaintext to encrypted pools
+
+---
+
+## Public API Reference
+
+### MemoryEventHandler
+
+```python
+from mvent.decorators.memory_events import MemoryEventHandler
+memory_events = MemoryEventHandler(pool_name: str)
+@memory_events.on(event_name: str)
+def callback(new_value):
+    ...
+memory_events.emit(event_name: str, value: object, ttl: float = None)
+memory_events.cleanup()
+```
+
+### SharedMemoryPool
+
+```python
+from mvent.core.shared_memory import SharedMemoryPool
+SharedMemoryPool(pool_name: str, size: int = ..., encryption_key: bytes = None)
+pool.set(key: str, value: object, ttl: float = None)
+pool.get(key: str)
+pool.delete(key: str)
+pool.cleanup()
+```
+
+### InMemoryHTTPManager
+
+```python
+from mvent.core.in_memory_http import InMemoryHTTPManager
+http = InMemoryHTTPManager(pool_name: str = None)
+@http.route("/endpoint")
+def handler(request): ...
+response = http.send_request(path, method="POST", data={...}, stream=False)
+```
+
+### StreamingEvent
+
+```python
+from mvent.core.streaming_event import StreamingEvent
+stream = StreamingEvent(stream_key: str)
+stream.subscribe(callback)
+stream.publish(data)
+stream.stop()
+```
+
+### SocketsManager
+
+```python
+from mvent.core.sockets_manager import SocketsManager
+sockets = SocketsManager(pool_name: str = None)
+sockets.connect(room)
+sockets.subscribe(room, handler)
+sockets.send(room, data)
+sockets.disconnect(room)
+```
+
+### MonitoringTools
+
+```python
+from mvent.core.monitoring import MonitoringTools
+monitor = MonitoringTools(pool)
+monitor.wrap_handler(name, fn)
+monitor.record_event(name)
+monitor.get_event_stats()
+monitor.get_handler_stats()
+monitor.get_memory_stats()
+```
+
 ---
 
 ## Usage Patterns & Workflows
 
-Below are fundamental and advanced workflows distilled from real mvent examples. Each shows how to compose core and advanced modules for common engineering scenarios.
-
-### 1. Basic Event-Driven Shared Memory (Multi-Handler Pattern)
+### Basic Event Multi-Handler
 
 ```python
-from mvent.decorators.memory_events import MemoryEventHandler
-import time
-
-# Create a memory event handler tied to shared memory
 memory_events = MemoryEventHandler("example_pool")
-
-# Handler for event
 @memory_events.on("user_data")
-def handle_user_update(new_value):
-    print(f"Received user data update: {new_value}")
-
-# Another handler for the SAME event
+def handle_user_update(val): print(f"Update: {val}")
 @memory_events.on("user_data")
-def log_user_update(new_value):
-    print(f"Logging user update: {new_value}")
-
-try:
-    print("Emitting events...")
-    memory_events.emit("user_data", {"name": "John", "age": 30})
-    time.sleep(1)
-    memory_events.emit("user_data", {"name": "Jane", "age": 25})
-    time.sleep(1)
-    # Emit event with TTL—auto expires
-    memory_events.emit("user_data", {"name": "Bob", "age": 35}, ttl=2.0)
-    time.sleep(3)
-finally:
-    memory_events.cleanup()
+def audit(val): print(f"Audit: {val}")
+memory_events.emit("user_data", {"user": "bob"}, ttl=2.0)
 ```
 
-**Pattern:** Multiple handlers per event, TTL for temporary data, event emission triggers all subscribers in all processes using that pool.
+**Note:** All handlers, all processes on this pool get triggered. TTL = 2s = msg is autodeleted.
 
----
-
-### 2. In-Memory HTTP Request/Response & Streaming
+### In-Memory HTTP with Streaming
 
 ```python
-from mvent.core.in_memory_http import InMemoryHTTPManager
-
 http = InMemoryHTTPManager()
-
 @http.route("/greet")
 def greet_handler(request):
-    data = request["data"]
-    return {"greeting": f"Hello, {data['name']}!"}
+    return {"msg": f"Hi, {request['data']['who']}!"}
+resp = http.send_request("/greet", method="POST", data={"who": "Alice"})
 
-# Regular request
-resp = http.send_request("/greet", method="POST", data={"name": "Alice"})
-print("HTTP Response:", resp)
-
-# Route with streaming response using StreamingEvent
 @http.route("/stream")
-def stream_handler(request, stream_event=None):
-    for i in range(3):
-        stream_event.publish(f"Chunk {i}")
+def stream_handler(req, stream_event=None):
+    for chunk in range(5): stream_event.publish(f"Chunk-{chunk}")
     return stream_event
-
-stream = http.send_request("/stream", stream=True)
-def stream_receiver(msg): print("STREAM CHUNK:", msg)
-stream.subscribe(stream_receiver)
-import time
-time.sleep(1)
-stream.stop()
+my_stream = http.send_request("/stream", stream=True)
+my_stream.subscribe(lambda x: print("Got:", x))
 ```
 
 ---
 
 ## Benchmarking
 
-mvent provides real-world benchmark scripts to directly compare its in-memory IPC performance against traditional Python HTTP (http.server + requests), FastAPI, and low-level sockets.
+### HTTP Benchmark
 
-### 1. HTTP Benchmark (InMemoryHTTPManager vs FastAPI vs http.server)
+Tests **req/s, avg/p95 latency, CPU/MEM stats** between:
+- mvent in-memory HTTP
+- FastAPI
+- http.server+requests
 
-Location: [`benchmarking/benchmark_http_vs_mvent.py`](benchmarking/benchmark_http_vs_mvent.py:1)
-- **What it tests:** Throughput, latency (avg/p95), CPU usage, memory usage, and overall resource efficiency across common Python web IPC methods.
-- **How it works:** Each server type (http.server, FastAPI, mvent InMemoryHTTPManager) is run, requests are sent in bulk, and a local ResourceMonitor thread samples CPU/memory at 10ms intervals.
-- **Metrics collected:** 
-  - Req/s (throughput), latency (ms), p95 latency, CPU %, memory usage, delta, and an "efficiency score" (req/s per CPU%)
-- **How to run:** Run the script, select which benchmark (quick, standard, or stress test), and review terminal plus [`HTTP_BENCHMARKS.txt`](HTTP_BENCHMARKS.txt:1) for detailed summary.
+See [`benchmarking/benchmark_http_vs_mvent.py`](benchmarking/benchmark_http_vs_mvent.py)
 
-**Sample output:**
-- Each method's throughput, mean/p95 latency, CPU & RAM, and calculated "efficiency"
-- Performance insights: speedup, CPU savings, etc. (e.g., "mvent is 3.5x faster than traditional HTTP, saves 25% CPU usage")
+### Sockets Benchmark
+
+Tests **raw throughput, pub/sub message integrity**, for:
+- mvent SocketsManager
+- Normal Python TCP sockets
+
+See [`benchmarking/benchmark_sockets_vs_mvent.py`](benchmarking/benchmark_sockets_vs_mvent.py)
+
+> **Tip:** Use efficiency score (req/s per CPU%) for real performance comparisons. Run on "quiet" boxes only!
+
 ---
 
 ## Subsystem and Data/Event Flow Diagrams
 
-### System Block Diagram
-
-A full overview of major mvent subsystems and their interactions across processes:
+### General Block Diagram
 
 ```mermaid
 flowchart TB
-    subgraph Process_A
-        A1[Application]
-        EM1[MemoryEventHandler]
-    end
-    subgraph Process_B
-        B1[Application]
-        EM2[MemoryEventHandler]
-    end
-    SMP[SharedMemoryPool]
-    EventMGR(EventManager)
-    HTTP(InMemoryHTTPManager)
-    SE(StreamingEvent)
-    SM(SocketsManager)
-    MONITOR(MonitoringTools)
-    ENC[Encryption (Fernet/AES)]
+  subgraph Process_A
+    A1[Application]
+    EM1[MemoryEventHandler]
+  end
+  subgraph Process_B
+    B1[Application]
+    EM2[MemoryEventHandler]
+  end
+  SMP[SharedMemoryPool]
+  ENC[Encryption (Fernet/AES)]
+  EventMGR(EventManager)
+  HTTP(InMemoryHTTPManager)
+  SE(StreamingEvent)
+  SM(SocketsManager)
+  MONITOR(MonitoringTools)
 
-    A1 --> EM1
-    B1 --> EM2
-    EM1 <--> SMP
+  A1 --> EM1
+  EM1 <--> SMP
+  EM1 <--> EventMGR
+  SMP <--> ENC
+  EventMGR <--> SMP
+  HTTP <--> SMP
+  SE <--> SMP
+  SM <--> SMP
+
+  B1 --> EM2
+  EM2 <--> SMP
+  EM2 <--> EventMGR
+
+  MONITOR -.-> SMP
+  MONITOR -.-> HTTP
+  MONITOR -.-> SM
+```
+
+### Data/Event Sequence (Process A emits event for Process B)
+
+```mermaid
+sequenceDiagram
+    participant AppA as Application A
+    participant EH_A as MemoryEventHandler (A)
+    participant SMP as SharedMemoryPool
+    participant EMGR as EventManager
+    participant EH_B as MemoryEventHandler (B)
+    participant AppB as Application B
+
+    AppA->>EH_A: emit("event", data)
+    EH_A->>SMP: write(event=data)
+    SMP->>EMGR: notifies change
+    EMGR->>EH_B: triggers handlers
+    EH_B->>AppB: callback(data)
+```
+
+---
+
+## Engineering Notes & Edge Cases
+
+### TTL Consistency
+
+- TTL cleanup in a thread; possible sub-second retention of expired keys.
+
+### Multiprocess Deliveries
+
+- Events go to *all* processes on a pool—but a totally busy or deadlocked process can miss execution.
+
+### Encryption Overhead
+
+- Minimal, but measurable—use only for sensitive pools.
+
+### Streaming backpressure
+
+- Slow subs can build up chunk queues—monitor with MonitoringTools and scale out if needed.
+
+### Debugging
+
+- Hook `MonitoringTools` everywhere for per-pool, per-event, per-handler stats.
+
+### Extending
+
+- Base all new IPC patterns on `SharedMemoryPool` or `EventManager`
+- Custom storage? Just update the pool layer (ditch mmap for custom, e.g. Redis, S3, whatever)
+
+### OS caveats
+
+- **Windows:** Data in local user's temp dir, cleaned at reboot.
+- **Linux/macOS:** Uses `/tmp`; double-check permissions in shared envs.
+
 ---
 
 ## Installation, Migration & Compatibility
 
 ### Installation
 
-To install mvent:
-
 ```bash
 pip install mvent
 ```
-
-For optional encryption support (Fernet/AES):
-
+To include encryption support:
 ```bash
 pip install cryptography
 ```
 
-### Migration and Compatibility
+### Migration
 
-- **Legacy Support:**  
-  All new APIs are opt-in. Existing mvent codebases (using memory events, basic pools) are forward-compatible—new modules (HTTP, streaming, sockets, monitoring, encryption) do not interfere with old code.
-- **Enabling Security:**  
-  To enable encryption for a shared memory pool, create it with an `encryption_key`:
-  ```python
-  from mvent.core.shared_memory import SharedMemoryPool
-  from cryptography.fernet import Fernet
-  key = Fernet.generate_key()
-  secure_pool = SharedMemoryPool("secure_pool", encryption_key=key)
-  ```
-- **Monitoring:**  
-  Attach a MonitoringTools instance to any manager to record stats and event handler performance.
-
-### Compatibility Notes
-
-- **Thread Safety:**  
----
-
-## Engineering Notes & Edge Cases
-
-### Limitations & Gotchas
-
-- **TTL Expiry Consistency:**  
-  TTL cleanup runs in background threads. Small delays (subsecond) may occur before expired data is cleared.
-- **Multiprocess Event Delivery:**  
-  All processes using the same pool receive events, but handler execution is only guaranteed in responsive/running processes. Stopped or blocked processes may miss triggers.
-- **Encryption Overhead:**  
-  Using Fernet/AES introduces slight overhead for set/get ops (worthwhile for sensitive data only).  
-- **StreamingEvent Chunks:**  
-  If a stream subscriber falls behind (slow callback), chunk delivery may create memory pressure.
-- **Debugging Interprocess Issues:**  
-  Use MonitoringTools to attach metrics to every pool/event/handler for visibility.
-
-### Extensibility Notes
-
-- **Adding new IPC patterns:**  
-  Derive new managers from SharedMemoryPool/EventManager for custom protocols.
-- **Extending Monitoring:**  
-  Implement callback wrappers and stats storage in MonitoringTools for new analytics.
-- **Custom Storage Backends:**  
-  Swap out mmap for alternate shared memory or fully distributed stores—update only internal pool logic.
-
-### System-Specific
-
-- **Windows:**  
-  Memory-mapped files stored in local user temp directories; cleanup guaranteed by OS at reboot.
-- **Linux/macOS:**  
-  Uses `/tmp`; user and group permissions may require adjustment.
-
----
-
-## Review
-
-This documentation provides every engineering detail of mvent: from core design and API to benchmarks, diagrams, usage, extensibility, limitations, and practical engineering tips.
-
-Use [`ENGINEER.md`](ENGINEER.md:1) as the canonical resource for maintenance, extension, and onboarding of new contributors and advanced users.
-
----
-  All public APIs are thread-safe. Locks safeguard every mutation and cleanup operation.
-- **Python Version:**  
-  Target: Python 3.8+, due to typing/contextlib and multiprocessing support.
-- **Platform:**  
-  Works cross-platform (Linux, Windows, macOS). For best performance, run benchmarks on native hardware, not VMs.
-- **Resources:**  
-  Monitors CPU and RAM usage internally; pool memory is bounded only by OS disk/quota and cleanup TTL.
-
-### Contributing
-
-Please submit issues or pull requests via [GitHub](https://github.com/cognition-brahmai/mvent).
-- Add new modules, protocols, or monitors via well-isolated classes
-- All code should include docstrings, type hints, and at least one usage example
-
-### Authors & Support
-
-Developed by [BRAHMAI](https://brahmai.in)
-
-For support/questions:  
-- Open an issue on GitHub  
-- Email address: see repository contact
-
----
-```mermaid
-flowchart TB
-    EM2 <--> SMP
-    SMP <--> ENC
-    EM1 <--> EventMGR
-    EventMGR <--> SMP
-    HTTP <--> SMP
-    SE <--> SMP
-    SM <--> SMP
-    MONITOR --- SMP
-    MONITOR --- HTTP
-    MONITOR --- SM
-```
-
-### Data/Event Sequence
-
-Sample event flow: "Event emitted in Process A triggers callback in Process B"
-
-1. Process_A uses `MemoryEventHandler.emit`
-2. Data written to SharedMemoryPool
-3. EventManager detects change in pool value
-4. All subscribed handlers in all processes are triggered (via `on("event")`)
-5. Handler execution in respective processes
-
----
-
-> Extend these diagrams for custom architecture or edge cases as needed (e.g., multi-stream, multi-room messaging, encrypted pools).
-
-### 2. Sockets Benchmark (SocketsManager vs traditional Python sockets)
-
-Location: [`benchmarking/benchmark_sockets_vs_mvent.py`](benchmarking/benchmark_sockets_vs_mvent.py:1)
-- **What it tests:** Pub/sub, send/recv reliability, and raw throughput for both mvent and traditional TCP sockets.
-- **How it works:** Traditional sockets use a server/client on a local port; mvent SocketsManager implements the same pub/sub pattern in RAM. Delivery timing and reliability are checked for 1-way tests.
-- **Metrics collected:** Time to deliver N messages over both mechanisms, end-to-end.
-- **How to run:** Run the script. It prints time for each backend and verifies correct message count.
-
-**Best Practices:**
-- Use "Standard" or "Stress Test" for realistic performance data.
-- Always run on a quiescent (unloaded) machine for accurate stats.
-- Inspect resource and efficiency metrics—not just raw req/s—to choose the best IPC backend for your app.
-- Use benchmarks as templates for extending your own IPC patterns.
-
----
-**Pattern:** Registered handlers for HTTP-like endpoints—supports both one-shot and streaming outputs (fully in RAM).
-
----
-
-### 3. In-Memory Sockets: Room-Based Pub/Sub
+- All new modules are opt-in. Legacy APIs will *just work*.
+- For encryption, pass a Fernet key at pool creation:
 
 ```python
-from mvent.core.sockets_manager import SocketsManager
-
-sockets = SocketsManager()
-
-def chat_handler(msg):
-    print("ROOM GOT:", msg)
-
-room = "general"
-sockets.connect(room)
-sockets.subscribe(room, chat_handler)
-sockets.send(room, "Hello, room!")
-sockets.send(room, "mvent sockets, in RAM only.")
-
-import time
-time.sleep(1)
-sockets.disconnect(room)
-```
-
-**Pattern:** Room/channel abstraction for socket-like, multi-producer/multi-consumer pub/sub on shared memory; integrates with other mvent modules.
-
----
-
-### 4. Real-Time Streaming: Observables over Shared Memory
-
-```python
-from mvent.core.streaming_event import StreamingEvent
-
-stream = StreamingEvent(stream_key="chatroom1")
-
-def receiver(data):
-    print("STREAMED MESSAGE:", data)
-
-stream.subscribe(receiver)
-
-# Simulate publishing several messages ("chunks")
-for i in range(5):
-    stream.publish(f"Live chunk {i}")
-
-import time
-time.sleep(1)
-stream.stop()
-```
-
-**Pattern:** Data published to a stream is delivered live to all subscribers; excellent for observables and chunked data feeds.
-
----
-
-### 5. Monitoring and Encrypted Pools
-
-```python
-from mvent.core.monitoring import MonitoringTools
 from mvent.core.shared_memory import SharedMemoryPool
-try:
-    from cryptography.fernet import Fernet
-except ImportError:
-    Fernet = None
-
-if Fernet:
-    key = Fernet.generate_key()
-    secure_pool = SharedMemoryPool("secure_demo_pool", encryption_key=key)
-else:
-    print("Encryption demo: cryptography package not installed.")
-    secure_pool = SharedMemoryPool("plain_demo_pool")
-
-monitor = MonitoringTools(pool=secure_pool)
-
-def handler(x): return x * x
-wrapped_handler = monitor.wrap_handler("square", handler)
-monitor.record_event("square_call")
-
-res = wrapped_handler(5)
-print("Handler result:", res)
-print("Event stats:", monitor.get_event_stats())
-print("Handler stats:", monitor.get_handler_stats())
-print("Memory stats:", monitor.get_memory_stats())
+from cryptography.fernet import Fernet
+key = Fernet.generate_key()
+secure_pool = SharedMemoryPool("secure_pool", encryption_key=key)
 ```
 
-**Pattern:** Drop-in monitoring for any handler/event, live pool stats, and opt-in end-to-end encryption.
-```mermaid
-flowchart TB
-    EventMGR <--> SMP
-    HTTP <--> SMP
-    SE <--> SMP
-    SM <--> SMP
-    MONITOR --- SMP
-    MONITOR --- HTTP
-    MONITOR --- SM
-```
+### Compatibility
 
----
-
-## Core Design & Architecture
-
-_Section describes high-level mechanisms, with a per-module dive next._
-
-### SharedMemoryPool
-_TODO: Overview, lifecycle, threading, TTL, pickle, cleanup, encryption._
-
-### EventManager
-_TODO: Event subscriptions, callback triggers, watcher thread, thread safety._
-
-### MemoryEventHandler
-_TODO: User-facing API, decorators, emit, cleanup._
-
----
-
-## Advanced Modules
-
-### InMemoryHTTPManager
-_TODO: HTTP-like in-RAM API, routing, streaming, frame encoding, use-cases._
-
-### StreamingEvent
-_TODO: Shared-memory pub/sub, chunked/live data, observable flows._
-
-### SocketsManager
-_TODO: Room/channel messaging, in-memory "socket", pub/sub interfaces._
-
-### MonitoringTools
-_TODO: Perf stats, event frequency, attach/scenario design._
-
-### Encryption
-_TODO: Secure pools, Fernet/AES, opt-in, fallback._
-
----
-
-## Public API Reference
-
-_TODO: Insert auto-extracted/class doc signatures, decorator usage, example chains._
-
----
-
-## Usage Patterns & Workflows
-
-_TODO: Extract complex/main-examples, multi-handler, advanced streaming, encrypted monitoring._
-
----
-
-## Benchmarking
-
-_TODO: Describe benchmarking scripts, extend/interpret, resource monitor tips, IPC design._
-
----
-
-## Subsystem and Data/Event Flow Diagrams
-
-_TODO: Process activity/edge-case diagrams (sequence/flow)._
-
----
-
-## Engineering Notes & Edge Cases
-
-_TODO: Limitations, error-handling philosophy, extensibility, system-specific gotchas._
-
----
-
-## Installation, Migration & Compatibility
-
-_TODO: Install, legacy support, migration, enabling optional security._
+- **Python:** 3.8+
+- **Platforms:** Linux, Mac, Windows
+- **Thread safety:** All core APIs locked & atomic; no race leaks
+- **Resource:** Pools limited only by disk/quota/TTL
 
 ---
 
 ## Contribution and Support
 
-- See [GitHub issues](https://github.com/cognition-brahmai/mvent)
-- Contributing guide
-- Authors: [BRAHMAI](https://brahmai.in)
+- File issues, pull requests on [GitHub](https://github.com/cognition-brahmai/mvent)
+- Docs, code, and PRs must always have full typehints and usage examples (no excuses)
+- Authors: Made with <3 by [BRAHMAI](https://brahmai.in)
